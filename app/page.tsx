@@ -1,65 +1,345 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import type { CSSProperties } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+
+type Todo = {
+  text: string;
+  date: string;
+  time?: string;  completed: boolean;
+};
+
+export default function Page() {
+  const [userInput, setUserInput] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [list, setList] = useState<Todo[]>([]);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
+
+ const formatDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+const formatDateForDisplay = (dateStr: string) => {
+  const [year, month, day] = dateStr.split('-');
+  return `${day}-${month}-${year}`;
+};
+const selectedDateStr = formatDate(selectedDate);
+
+const todosForSelectedDate = list.filter(
+  (todo) => todo.date === selectedDateStr
+);
+
+const completedCount = todosForSelectedDate.filter(
+  (t) => t.completed
+).length;
+const totalCount = todosForSelectedDate.length;
+
+const formatTime = (time: string) => {
+  const [hour, minute] = time.split(':').map(Number);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h = hour % 12 || 12;
+  return `${h}:${minute.toString().padStart(2, '0')} ${ampm}`;
+};
+const isOverdue = (item: Todo) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const taskDate = new Date(item.date);
+  taskDate.setHours(0, 0, 0, 0);
+
+  return !item.completed && taskDate < today;
+};
+const toggleComplete = (index: number) => {
+  const updated = [...list];
+  updated[index].completed = !updated[index].completed;
+  setList(updated);
+};
+const handleAction = () => {
+  if (!userInput.trim() || !date) return;
+
+  if (editIndex !== null) {
+    const updated = [...list];
+    updated[editIndex] = {
+      ...updated[editIndex],
+      text: userInput,
+      date,
+      ...(time ? { time } : {}),
+    };
+    setList(updated);
+    setEditIndex(null);
+  } else {
+    setList([
+      ...list,
+      {
+        text: userInput,
+        date,
+        ...(time ? { time } : {}),
+        completed: false,
+      },
+    ]);
+  }
+
+  setUserInput('');
+  setDate('');
+  setTime('');
+};
+const handleEdit = (index: number) => {
+  const todo = list[index];
+  setUserInput(todo.text);
+  setDate(todo.date);
+  setTime(todo.time ?? '');
+  setEditIndex(index);
+  setSelectedDate(new Date(todo.date));
+};
+
+  const handleDelete = (index: number) => {
+    setList(list.filter((_, i) => i !== index));
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <main style={styles.page}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>🌸 My Todo List</h1>
+
+        {/* INPUT ROW */}
+        <div style={{ ...styles.inputRow, position: 'relative' }}>
+          <input
+            style={styles.input}
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            placeholder="✨ Add something ..."
+          />
+
+          {/* DATE + CALENDAR ICON */}
+          <div style={styles.dateWrapper}>
+            <input
+              type="date"
+              style={styles.dateInput}
+              value={date}
+              readOnly
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <button
+              style={styles.calendarBtn}
+              onClick={() => setShowCalendar(!showCalendar)}
+            >
+              📅
+            </button>
+          </div>
+
+          <input
+            type="time"
+            style={styles.timeInput}
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
+
+          <button style={styles.addBtn} onClick={handleAction}>
+            {editIndex !== null ? '💾' : '➕'}
+          </button>
+
+          {/* CALENDAR POPUP */}
+          {showCalendar && (
+            <div style={styles.calendarPopup}>
+             <Calendar
+  value={selectedDate}
+  onChange={(value) => {
+    const d = value as Date;
+    setSelectedDate(d);
+    setDate(formatDate(d)); // ✅ correct local date
+    setShowCalendar(false);
+  }}
+/>
+            </div>
+          )}
         </div>
-      </main>
+        <h3 style={{ fontSize: 14, marginBottom: 6 }}>
+  📅 Tasks for {formatDateForDisplay(selectedDateStr)}
+</h3>
+
+<p style={{ fontSize: 12, marginBottom: 10 }}>
+  ✅ {completedCount} / {totalCount} completed
+</p>
+
+        {/* TODO LIST */}
+        <ul style={styles.list}>
+          {todosForSelectedDate.map((item, index) => (
+  <li
+    key={index}
+    style={{
+      ...styles.listItem,
+      border: isOverdue(item) ? '2px solid #ef4444' : 'none',
+      background: item.completed
+        ? '#ecfdf5'
+        : isOverdue(item)
+        ? '#fee2e2'
+        : '#fdf2f8',
+      opacity: item.completed ? 0.7 : 1,
+    }}
+  >
+    <div style={{ display: 'flex', gap: 8 }}>
+      <input
+        type="checkbox"
+        checked={item.completed}
+        onChange={() => toggleComplete(index)}
+      />
+
+      <div>
+        <span
+          style={{
+            textDecoration: item.completed ? 'line-through' : 'none',
+            color: item.completed ? '#16a34a' : '#000',
+          }}
+        >
+          {item.text}
+        </span>
+
+        <div style={styles.meta}>
+          📅 {formatDateForDisplay(item.date)}
+          {item.time && <> ⏰ {formatTime(item.time)}</>}
+        </div>
+      </div>
     </div>
+
+    <div>
+      <button style={styles.editBtn} onClick={() => handleEdit(index)}>
+        ✏️
+      </button>
+      <button style={styles.deleteBtn} onClick={() => handleDelete(index)}>
+        🗑️
+      </button>
+    </div>
+  </li>
+))}
+        </ul>
+{todosForSelectedDate.length === 0 && (
+  <p style={styles.empty}>
+    No tasks for this date 🌷
+  </p>
+)}
+
+      </div>
+    </main>
   );
 }
+
+const styles: Record<string, CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #fce7f3, #e0f2fe)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: 'ui-rounded, system-ui',
+  },
+  card: {
+    background: '#fff',
+    padding: 24,
+    borderRadius: 20,
+    width: 350,
+    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  inputRow: {
+    display: 'flex',
+    gap: 8,
+    marginBottom: 16,
+    flexWrap: 'wrap',
+  },
+  input: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 12,
+    border: '1px solid #ddd',
+  },
+  dateWrapper: {
+    display: 'flex',
+    gap: 4,
+    alignItems: 'center',
+  },
+  dateInput: {
+    padding: 8,
+    borderRadius: 10,
+    border: '1px solid #ddd',
+    fontSize: 12,
+  },
+  calendarBtn: {
+    background: '#fdf2f8',
+    border: '1px solid #ddd',
+    borderRadius: 10,
+    padding: '6px 8px',
+    cursor: 'pointer',
+    fontSize: 16,
+  },
+  calendarPopup: {
+  position: 'absolute',
+  top: 60,
+  left: 0,
+  zIndex: 10,
+  borderRadius: 20,
+  overflow: 'hidden',
+  boxShadow: '0 15px 40px rgba(0,0,0,0.2)',
+  transform: 'scale(1.15)',   // 👈 BIGGER
+  transformOrigin: 'top left',
+},
+
+  timeInput: {
+    padding: 8,
+    borderRadius: 10,
+    border: '1px solid #ddd',
+    fontSize: 12,
+  },
+  addBtn: {
+    borderRadius: 12,
+    border: 'none',
+    background: '#f472b6',
+    color: '#fff',
+    padding: '0 14px',
+    cursor: 'pointer',
+    fontSize: 18,
+  },
+  list: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+  },
+  listItem: {
+    background: '#fdf2f8',
+    padding: 10,
+    borderRadius: 12,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  meta: {
+    fontSize: 12,
+    color: '#888',
+  },
+  editBtn: {
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    marginRight: 6,
+  },
+  deleteBtn: {
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+  },
+  empty: {
+    textAlign: 'center',
+    color: '#888',
+    marginTop: 12,
+  },
+};

@@ -44,3 +44,24 @@ body {
   background: #fbcfe8;
   border-radius: 50%;
 }
+
+
+/* ---- Force all normal text to black ---- */
+body {
+  color: #000000 !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: #000000 !important;
+}
+
+/* Paragraphs & labels */
+p, span, label, div {
+  color: #000000;
+}
+
+/* Small meta text (like date/time) */
+small {
+  color: #000000 !important;
+}

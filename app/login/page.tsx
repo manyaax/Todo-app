@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-
+import Link from "next/link";
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -18,36 +18,64 @@ export default function Login() {
       redirect: false,
     });
 
-    if (!res?.error) {
-      router.push("/");
-    } else {
+    if (res?.ok) {
+  window.location.href = "/dashboard";
+}
+else {
       alert("Invalid credentials");
     }
   };
 
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <form onSubmit={handleLogin} className="space-y-4 border p-6 rounded-xl">
-        <h1 className="text-2xl font-bold">Login</h1>
+ return (
+  <div
+    className="min-h-screen flex items-center justify-center"
+    style={{
+      background: "linear-gradient(135deg, #fce7f3, #e0f2fe)",
+      fontFamily: "ui-rounded, system-ui",
+    }}
+  >
+    <div className="bg-white p-8 rounded-2xl shadow-xl w-[340px] text-center">
+      <h1 className="text-xl font-semibold mb-6">🌸 Login</h1>
 
+      <form onSubmit={handleLogin} className="space-y-4">
         <input
+          name="email"
+          type="email"
+          value={email}
           placeholder="Email"
-          className="border p-2 w-full"
+          required
+          className="w-full border border-gray-300 rounded-xl p-3 outline-none focus:ring-2 focus:ring-pink-300"
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
+          name="password"
           type="password"
+          value={password}
           placeholder="Password"
-          className="border p-2 w-full"
+          required
+          className="w-full border border-gray-300 rounded-xl p-3 outline-none focus:ring-2 focus:ring-pink-300"
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button className="bg-green-500 text-white px-4 py-2 rounded">
+        <button
+          type="submit"
+          className="w-full py-3 rounded-xl text-white font-medium"
+          style={{ background: "#f472b6" }}
+        >
           Login
         </button>
       </form>
+
+      <p className="text-sm mt-5">
+        Don’t have an account?{" "}
+        <a href="/register" className="text-blue-500 hover:underline">
+          Create account
+        </a>
+      </p>
     </div>
-  );
+  </div>
+);
+
 }
 

@@ -34,6 +34,8 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;     // ⭐ store name
+      token.email = user.email;   // ⭐ store email
       }
       return token;
     },
@@ -41,6 +43,8 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.name = token.name as string;   // ⭐ send to frontend
+      session.user.email = token.email as string;
       }
       return session;
     },

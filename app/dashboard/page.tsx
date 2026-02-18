@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-
+import { useSession } from "next-auth/react";
 type Todo = {
   id: string;
   text: string;
@@ -26,6 +26,7 @@ const [calendarKey, setCalendarKey] = useState(0);
   fetchTodos();
 }, []);
 
+const { data: session } = useSession();
 const fetchTodos = async () => {
   try {
     const res = await fetch("/api/todos", {
@@ -177,7 +178,37 @@ const handleDelete = async (id: string) => {
   return (
     <main style={styles.page}>
       <div style={styles.card}>
-        <h1 style={styles.title}>🌸 My Todo List</h1>
+<div style={{ textAlign: "center", marginBottom: 14 }}>
+  <div style={{ fontSize: 14, color: "#000000" }}>
+    Hi,{" "}
+    <span style={{ fontWeight: 600, color: "#111827" }}>
+      {session?.user?.name}
+    </span>{" "}
+    👋
+  </div>
+
+  <div
+    style={{
+      marginTop: 8,
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 8,
+    }}
+  >
+    <span style={{ fontSize: 20 }}>🌸</span>
+    <h1
+      style={{
+        margin: 0,
+        fontSize: 16,
+        fontWeight: 600,
+        color: "#111827",
+      }}
+    >
+      My Todo List
+    </h1>
+  </div>
+</div>
 
         {/* INPUT ROW */}
         <div style={{ ...styles.inputRow, position: 'relative' }}>

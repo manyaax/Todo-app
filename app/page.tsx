@@ -28,15 +28,29 @@ const [calendarKey, setCalendarKey] = useState(0);
 
 const fetchTodos = async () => {
   try {
-    const res = await fetch("/api/todos");
+    const res = await fetch("/api/todos", {
+  credentials: "include",
+});
+
     const data = await res.json();
 
     if (Array.isArray(data)) {
-      setList(data);
-    } else {
-      console.error("API Error:", data);
-      setList([]); // prevent crash
-    }
+
+  const formatted = data.map((t: any) => ({
+    id: t._id,          // ⭐ convert Mongo _id → frontend id
+    text: t.text,
+    date: t.date,
+    time: t.time,
+    completed: t.completed,
+  }));
+
+  setList(formatted);
+
+} else {
+  console.error("API Error:", data);
+  setList([]);
+}
+
   } catch (error) {
     console.error("Fetch failed:", error);
     setList([]);
@@ -61,8 +75,9 @@ const formatDateForDisplay = (dateStr: string) => {
 const selectedDateStr = formatDate(selectedDate);
 
 const todosForSelectedDate = list.filter(
-  (todo) => todo.date === selectedDateStr
+  (todo) => !selectedDateStr || todo.date === selectedDateStr
 );
+
 
 const completedCount = todosForSelectedDate.filter(
   (t) => t.completed
@@ -89,7 +104,7 @@ const toggleComplete = async (todo: Todo) => {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      ...todo,
+      id: todo.id,
       completed: !todo.completed,
     }),
   });
@@ -107,6 +122,7 @@ const handleAction = async () => {
 
     await fetch("/api/todos", {
       method: "PUT",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: todo.id,
@@ -118,6 +134,7 @@ const handleAction = async () => {
   } else {
     await fetch("/api/todos", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         text: userInput,
@@ -148,6 +165,7 @@ const handleEdit = (index: number) => {
 const handleDelete = async (id: string) => {
   await fetch("/api/todos", {
     method: "DELETE",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id }),
   });

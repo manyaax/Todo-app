@@ -1,21 +1,40 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Todo from "../../../models/Todo";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET() {
   await connectDB();
-  const todos = await Todo.find();
+
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const todos = await Todo.find({ userId: session.user.id });
   return NextResponse.json(todos);
 }
 
+
 export async function POST(req: Request) {
   await connectDB();
+
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
 
-  const newTodo = await Todo.create(body);
+  const todo = await Todo.create({
+    ...body,
+    userId: session.user.id,
+  });
 
-  return NextResponse.json(newTodo);
+  return NextResponse.json(todo);
 }
+
 
 export async function PUT(req: Request) {
   await connectDB();

@@ -16,6 +16,7 @@ const TodoSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  userId: { type: String, required: true },
 });
 
 export default mongoose.models.Todo ||

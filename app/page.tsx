@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 
 type Todo = {
+  id: string;
   text: string;
   date: string;
-  time?: string;  completed: boolean;
+  time?: string;
+  completed: boolean;
 };
 
 export default function Page() {
@@ -17,10 +19,35 @@ export default function Page() {
   const [time, setTime] = useState('');
   const [list, setList] = useState<Todo[]>([]);
   const [editIndex, setEditIndex] = useState<number | null>(null);
-
+const [calendarKey, setCalendarKey] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
+  useEffect(() => {
+  fetchTodos();
+}, []);
 
+const fetchTodos = async () => {
+  try {
+    const res = await fetch("/api/todos");
+    const data = await res.json();
+
+    if (Array.isArray(data)) {
+      setList(data);
+    } else {
+      console.error("API Error:", data);
+      setList([]); // prevent crash
+    }
+  } catch (error) {
+    console.error("Fetch failed:", error);
+    setList([]);
+  }
+};
+
+  useEffect(() => {
+  setCalendarKey(prev => prev + 1);
+}, [list]);
+
+  
  const formatDate = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -57,40 +84,58 @@ const isOverdue = (item: Todo) => {
 
   return !item.completed && taskDate < today;
 };
-const toggleComplete = (index: number) => {
-  const updated = [...list];
-  updated[index].completed = !updated[index].completed;
-  setList(updated);
+const toggleComplete = async (todo: Todo) => {
+  await fetch("/api/todos", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...todo,
+      completed: !todo.completed,
+    }),
+  });
+
+  fetchTodos();
 };
-const handleAction = () => {
-  if (!userInput.trim() || !date) return;
+
+const handleAction = async () => {
+  if (!userInput.trim()) return;
+
+  const finalDate = date || formatDate(selectedDate);
 
   if (editIndex !== null) {
-    const updated = [...list];
-    updated[editIndex] = {
-      ...updated[editIndex],
-      text: userInput,
-      date,
-      ...(time ? { time } : {}),
-    };
-    setList(updated);
-    setEditIndex(null);
-  } else {
-    setList([
-      ...list,
-      {
+    const todo = list[editIndex];
+
+    await fetch("/api/todos", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: todo.id,
         text: userInput,
-        date,
-        ...(time ? { time } : {}),
-        completed: false,
-      },
-    ]);
+        date: finalDate,
+        time,
+      }),
+    });
+  } else {
+    await fetch("/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: userInput,
+        date: finalDate,
+        time,
+      }),
+    });
   }
 
-  setUserInput('');
-  setDate('');
-  setTime('');
+  setUserInput("");
+  setDate("");
+  setTime("");
+  setEditIndex(null);
+
+  fetchTodos(); // refresh
 };
+
+
 const handleEdit = (index: number) => {
   const todo = list[index];
   setUserInput(todo.text);
@@ -100,9 +145,16 @@ const handleEdit = (index: number) => {
   setSelectedDate(new Date(todo.date));
 };
 
-  const handleDelete = (index: number) => {
-    setList(list.filter((_, i) => i !== index));
-  };
+const handleDelete = async (id: string) => {
+  await fetch("/api/todos", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+
+  fetchTodos();
+};
+
 
   return (
     <main style={styles.page}>
@@ -148,13 +200,30 @@ const handleEdit = (index: number) => {
           {/* CALENDAR POPUP */}
           {showCalendar && (
             <div style={styles.calendarPopup}>
-             <Calendar
-  value={selectedDate}
+            <Calendar
+  key={calendarKey}
   onChange={(value) => {
-    const d = value as Date;
-    setSelectedDate(d);
-    setDate(formatDate(d)); // ✅ correct local date
-    setShowCalendar(false);
+  if (!value || Array.isArray(value)) return;
+
+  setSelectedDate(value);
+  setDate(formatDate(value));  
+  setShowCalendar(false);     
+}}
+
+  value={selectedDate}
+  tileClassName={({ date, view }) => {
+    if (view !== 'month') return null;
+
+    const hasTodo = list.some(todo => {
+      const [dd, mm, yyyy] = todo.date.split('-').map(Number);
+      return (
+        date.getDate() === dd &&
+        date.getMonth() === mm - 1 &&
+        date.getFullYear() === yyyy
+      );
+    });
+
+    return hasTodo ? 'has-todo' : null;
   }}
 />
             </div>
@@ -185,11 +254,11 @@ const handleEdit = (index: number) => {
     }}
   >
     <div style={{ display: 'flex', gap: 8 }}>
-      <input
-        type="checkbox"
-        checked={item.completed}
-        onChange={() => toggleComplete(index)}
-      />
+    <input
+  type="checkbox"
+  checked={item.completed}
+  onChange={() => toggleComplete(item)}
+/>
 
       <div>
         <span
@@ -209,10 +278,19 @@ const handleEdit = (index: number) => {
     </div>
 
     <div>
-      <button style={styles.editBtn} onClick={() => handleEdit(index)}>
+      <button
+  style={styles.editBtn}
+  onClick={() => {
+    const realIndex = list.findIndex(t => t.id === item.id);
+    handleEdit(realIndex);
+  }}
+>
         ✏️
       </button>
-      <button style={styles.deleteBtn} onClick={() => handleDelete(index)}>
+      <button
+  style={styles.deleteBtn}
+  onClick={() => handleDelete(item.id)}
+>
         🗑️
       </button>
     </div>
@@ -224,7 +302,6 @@ const handleEdit = (index: number) => {
     No tasks for this date 🌷
   </p>
 )}
-
       </div>
     </main>
   );

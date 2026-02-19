@@ -8,9 +8,17 @@ export async function GET() {
   await connectDB();
 
   const session = await getServerSession(authOptions);
-  if (!session) {
+
+  // 🔐 proper type safe check
+  if (!session || !session.user || !session.user.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const todos = await Todo.find({ userId: session.user.id });
+
+  return NextResponse.json(todos);
+}
+
 
   const todos = await Todo.find({ userId: session.user.id });
   return NextResponse.json(todos);
